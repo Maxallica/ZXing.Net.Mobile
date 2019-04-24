@@ -12,15 +12,21 @@ using Android.Widget;
 using ZXing.Mobile;
 using System.Threading.Tasks;
 using System.Linq.Expressions;
+using Android.Content;
 
 [assembly:ExportRenderer(typeof(ZXingScannerView), typeof(ZXingScannerViewRenderer))]
 namespace ZXing.Net.Mobile.Forms.Android
 {
     [Preserve(AllMembers = true)]
     public class ZXingScannerViewRenderer : ViewRenderer<ZXingScannerView, ZXing.Mobile.ZXingSurfaceView>
-    {       
-        public ZXingScannerViewRenderer () : base ()
+    {
+        private Context appContext;
+
+        public ZXingScannerViewRenderer() : base() { }
+
+        public ZXingScannerViewRenderer (Context context) : base (context)
         {
+            appContext = context;
         }
 
         public static void Init ()
@@ -32,7 +38,6 @@ namespace ZXing.Net.Mobile.Forms.Android
         protected ZXingScannerView formsView;
 
         protected ZXingSurfaceView zxingSurface;
-        internal Task<bool> requestPermissionsTask;
 
         protected override async void OnElementChanged(ElementChangedEventArgs<ZXingScannerView> e)
         {
@@ -52,18 +57,19 @@ namespace ZXing.Net.Mobile.Forms.Android
                     }
                 };
 
-                var activity = Context as Activity;
+                var activity = appContext as Activity;
+                if (activity != null)
+                    await ZXing.Net.Mobile.Android.PermissionsHandler.RequestPermissionsAsync(activity);
 
-                if (activity != null)                
-                    await ZXing.Net.Mobile.Android.PermissionsHandler.RequestPermissionsAsync (activity);
-                
-                zxingSurface = new ZXingSurfaceView (Xamarin.Forms.Forms.Context as Activity, formsView.Options);
-                zxingSurface.LayoutParameters = new LayoutParams (LayoutParams.MatchParent, LayoutParams.MatchParent);
+                zxingSurface = new ZXingSurfaceView (appContext, formsView.Options)
+                {
+                    LayoutParameters = new LayoutParams (LayoutParams.MatchParent, LayoutParams.MatchParent)
+                };
 
                 base.SetNativeControl (zxingSurface);
 
                 if (formsView.IsScanning)
-                    zxingSurface.StartScanning(formsView.RaiseScanResult, formsView.Options);
+                    zxingSurface.StartScanning (formsView.RaiseScanResult, formsView.Options);
 
                 if (!formsView.IsAnalyzing)
                     zxingSurface.PauseAnalysis ();
